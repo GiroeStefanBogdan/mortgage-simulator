@@ -266,6 +266,12 @@ function simulateMonthByMonth(params) {
   let currentPayment = 0, totalPaid = 0, totalInterest = 0, totalInsurance = 0;
   let month = 0, maxRate = 0, lastIRCC = null;
 
+  // ── Sold de bază: urmărire paralelă a soldului fără rambursări anticipate ──
+  // Necesar pentru modul "reduce perioadă": la fiecare schimbare IRCC,
+  // rata se recalculează pe soldului de bază (mai mare), nu pe soldul real.
+  // Astfel plătim mai mult decât minimul necesar → creditul se termină mai devreme.
+  let baseBalance = loanAmount;
+
   while (balance > 0.01 && remainingMonths > 0) {
     month++;
     const ircc       = irccMonthly[month - 1] ?? (irccMonthly[irccMonthly.length - 1] ?? 0);
@@ -283,8 +289,15 @@ function simulateMonthByMonth(params) {
         // Prima lună: anuitate pe suma completă a creditului pentru durata totală
         currentPayment = computeAnnuityPayment(loanAmount, r, remainingMonths);
       } else if (irccChanged) {
-        // Schimbare IRCC: recalculează pe soldul curent și lunile rămase
-        currentPayment = computeAnnuityPayment(balance, r, remainingMonths);
+        if (prepayOption === 'reduce_period') {
+          // Reduce perioadă: recalculăm rata pe SOLDUL DE BAZĂ (fără rambursări).
+          // → Rata e mai mare decât minimul necesar pe soldul real (mai mic).
+          // → Excesul reduce principalul mai repede → creditul se termină mai devreme.
+          currentPayment = computeAnnuityPayment(Math.max(baseBalance, balance), r, remainingMonths);
+        } else {
+          // Reduce rată: recalculăm pe soldul real → plata lunară scade
+          currentPayment = computeAnnuityPayment(balance, r, remainingMonths);
+        }
       }
       payment       = currentPayment;
       interestPart  = balance * r;
@@ -311,6 +324,11 @@ function simulateMonthByMonth(params) {
     totalPaid      += payment + extraPrepay + insurancePart;
     totalInterest  += interestPart;
     totalInsurance += insurancePart;
+
+    // Actualizează soldul de bază (fără extra, doar plata regulată)
+    const baseInterest   = baseBalance * r;
+    const basePrincipal  = Math.max(0, currentPayment - baseInterest);
+    baseBalance = Math.max(0, baseBalance - basePrincipal);
 
     schedule.push({ month, ircc, annualRate, monthlyRate: r * 100, payment, insurancePart,
       totalPayment: payment + insurancePart, interestPart, principalPart, extraPrepay, balance,
