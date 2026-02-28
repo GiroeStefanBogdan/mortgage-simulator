@@ -999,6 +999,12 @@ tbody tr:hover td { color: var(--t1); }
 tbody tr.is-fixed td:nth-child(2) { color: var(--amber); }
 tbody tr.is-fixed { background: rgba(251,191,36,0.02); }
 
+/* Luna 0 row */
+tbody tr.month-zero { background: rgba(99,102,241,0.06); border-bottom: 2px solid rgba(99,102,241,0.25); }
+tbody tr.month-zero td { color: var(--t2); font-style: italic; }
+tbody tr.month-zero td:first-child,
+tbody tr.month-zero td:last-child { color: var(--t1); font-style: normal; font-weight: 600; }
+
 /* IRCC change rows */
 tbody tr.ircc-changed td:first-child { color: var(--sky-light); }
 
