@@ -129,6 +129,40 @@ body {
   margin-top: 1px;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ─── LANGUAGE TOGGLE ────────────────────────────────────────── */
+.lang-toggle {
+  display: flex;
+  background: var(--input);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.lang-btn {
+  background: transparent;
+  border: none;
+  padding: 4px 11px;
+  color: var(--t3);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: var(--ease);
+}
+.lang-btn:hover { color: var(--t1); }
+.lang-btn.active {
+  background: var(--sky-dim);
+  color: var(--sky-light);
+  box-shadow: inset 0 0 0 1px var(--sky-bdr);
+}
+
 .header-status {
   display: flex;
   align-items: center;

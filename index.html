@@ -21,12 +21,18 @@
         </div>
         <div>
           <h1>Credit <span>Ipotecar</span></h1>
-          <p>Simulator IRCC · România</p>
+          <p data-i18n="header_subtitle">Simulator IRCC · România</p>
         </div>
       </div>
-      <div class="header-status">
-        <span class="status-dot"></span>
-        <span>Calculator activ</span>
+      <div class="header-right">
+        <div class="lang-toggle">
+          <button class="lang-btn active" data-lang="ro">RO</button>
+          <button class="lang-btn" data-lang="en">EN</button>
+        </div>
+        <div class="header-status">
+          <span class="status-dot"></span>
+          <span data-i18n="header_status">Calculator activ</span>
+        </div>
       </div>
     </div>
   </header>
@@ -39,12 +45,12 @@
     <section class="card" id="sec-params">
       <div class="card-head">
         <span class="badge">01</span>
-        <h2>Parametri Credit</h2>
+        <h2 data-i18n="sec_params">Parametri Credit</h2>
       </div>
       <div class="form-grid">
 
         <div class="field">
-          <label>Monedă</label>
+          <label data-i18n="currency_lbl">Monedă</label>
           <div class="toggle" id="currencyToggle">
             <button class="toggle-btn active" data-value="RON">🇷🇴 RON</button>
             <button class="toggle-btn" data-value="EUR">🇪🇺 EUR</button>
@@ -52,7 +58,7 @@
         </div>
 
         <div class="field">
-          <label for="loanAmount">Sumă Credit</label>
+          <label for="loanAmount" data-i18n="loan_amount">Sumă Credit</label>
           <div class="input-wrap">
             <input type="number" id="loanAmount" value="408000" min="1000" step="1000">
             <span class="unit currency-unit">RON</span>
@@ -60,7 +66,7 @@
         </div>
 
         <div class="field">
-          <label for="loanDuration">Durată Credit</label>
+          <label for="loanDuration" data-i18n="loan_duration">Durată Credit</label>
           <div class="input-wrap">
             <input type="number" id="loanDuration" value="30" min="1" max="30" step="1">
             <span class="unit">ANI</span>
@@ -68,15 +74,15 @@
         </div>
 
         <div class="field">
-          <label>Tip Rată</label>
+          <label data-i18n="rate_type">Tip Rată</label>
           <div class="toggle" id="rateTypeToggle">
-            <button class="toggle-btn active" data-value="annuity">Anuitate</button>
-            <button class="toggle-btn" data-value="decreasing">Descrescătoare</button>
+            <button class="toggle-btn active" data-value="annuity" data-i18n="annuity">Anuitate</button>
+            <button class="toggle-btn" data-value="decreasing" data-i18n="decreasing">Descrescătoare</button>
           </div>
         </div>
 
         <div class="field">
-          <label for="insuranceRate">Asigurare Viață <span class="field-label-note">% lunar din sold</span></label>
+          <label for="insuranceRate"><span data-i18n="insurance_rate">Asigurare Viață</span> <span class="field-label-note" data-i18n="pct_sold">% lunar din sold</span></label>
           <div class="input-wrap">
             <input type="number" id="insuranceRate" value="0.026" min="0" step="0.001">
             <span class="unit">%</span>
@@ -95,37 +101,37 @@
             </svg>
           </div>
           <div>
-            <div class="avans-title">Calcul Avans</div>
-            <div class="avans-desc">Completează valoarea imobilului pentru a calcula automat avansul și creditul</div>
+            <div class="avans-title" data-i18n="avans_title">Calcul Avans</div>
+            <div class="avans-desc" data-i18n="avans_desc">Completează valoarea imobilului pentru a calcula automat avansul și creditul</div>
           </div>
         </div>
         <div class="form-grid form-grid-3">
           <div class="field">
-            <label for="propertyValue">Valoare Imobil</label>
+            <label for="propertyValue" data-i18n="property_value">Valoare Imobil</label>
             <div class="input-wrap">
               <input type="number" id="propertyValue" min="0" step="1000" value="408000">
               <span class="unit currency-unit">RON</span>
             </div>
           </div>
           <div class="field">
-            <label for="downPaymentPct">Procent Avans</label>
+            <label for="downPaymentPct" data-i18n="down_pct">Procent Avans</label>
             <div class="input-wrap">
               <input type="number" id="downPaymentPct" value="15" min="0" max="100" step="1">
               <span class="unit">%</span>
             </div>
           </div>
           <div class="field">
-            <label>Sumă Avans <span class="field-label-note">calculat automat</span></label>
+            <label><span data-i18n="down_amt">Sumă Avans</span> <span class="field-label-note" data-i18n="calculated_auto">calculat automat</span></label>
             <div class="input-wrap avans-computed">
               <input type="number" id="downPaymentAmt" readonly placeholder="—" step="0.01">
               <span class="unit currency-unit">RON</span>
             </div>
           </div>
         </div>
-        <p class="hint">Avansul se plătește direct vânzătorului și <strong>nu face parte din credit</strong>. Credit = Valoare imobil − Avans. Câmpul <em>Sumă Credit</em> de mai sus se actualizează automat.</p>
+        <p class="hint" data-i18n-html="hint_avans">Avansul se plătește direct vânzătorului și <strong>nu face parte din credit</strong>. Credit = Valoare imobil − Avans. Câmpul <em>Sumă Credit</em> de mai sus se actualizează automat.</p>
       </div>
 
-      <p class="hint" style="margin-top:0.75rem">Asigurarea de viață se calculează lunar ca <strong>% din soldul rămas</strong> și se adaugă la rată. Setează la 0 pentru a o exclude.</p>
+      <p class="hint" style="margin-top:0.75rem" data-i18n-html="hint_insurance">Asigurarea de viață se calculează lunar ca <strong>% din soldul rămas</strong> și se adaugă la rată. Setează la 0 pentru a o exclude.</p>
     </section>
 
     <!-- ═══════════════════════════════════════ -->
@@ -134,7 +140,7 @@
     <section class="card" id="sec-rates">
       <div class="card-head">
         <span class="badge">02</span>
-        <h2>Structura Dobânzii</h2>
+        <h2 data-i18n="sec_rates">Structura Dobânzii</h2>
       </div>
 
       <!-- Perioadă 1 — Fixă -->
@@ -142,31 +148,31 @@
         <div class="period-header">
           <div class="period-num p1">P1</div>
           <div>
-            <div class="period-title">Perioadă Fixă <span class="optional-tag">opțional</span></div>
-            <div class="period-desc">Dobândă fixă — de obicei primii 3–5 ani</div>
+            <div class="period-title"><span data-i18n="period1_title">Perioadă Fixă</span> <span class="optional-tag" data-i18n="optional_tag">opțional</span></div>
+            <div class="period-desc" data-i18n="period1_desc">Dobândă fixă — de obicei primii 3–5 ani</div>
           </div>
         </div>
         <div class="form-grid form-grid-2">
           <div class="field">
-            <label for="period1Years">Durată perioadă fixă</label>
+            <label for="period1Years" data-i18n="period1_dur">Durată perioadă fixă</label>
             <div class="input-wrap">
               <input type="number" id="period1Years" value="3" min="0" max="29" step="1">
               <span class="unit">ANI</span>
             </div>
           </div>
           <div class="field">
-            <label for="period1Rate">Dobândă anuală fixă</label>
+            <label for="period1Rate" data-i18n="period1_rate">Dobândă anuală fixă</label>
             <div class="input-wrap">
               <input type="number" id="period1Rate" value="4.79" min="0" step="0.01">
               <span class="unit">%/AN</span>
             </div>
           </div>
         </div>
-        <p class="hint">Setează durata la <strong>0 ani</strong> dacă creditul nu are perioadă fixă.</p>
+        <p class="hint" data-i18n-html="hint_p1">Setează durata la <strong>0 ani</strong> dacă creditul nu are perioadă fixă.</p>
       </div>
 
       <div class="period-separator">
-        <span>apoi</span>
+        <span data-i18n="period_then">apoi</span>
       </div>
 
       <!-- Perioadă 2 — Variabilă -->
@@ -174,37 +180,37 @@
         <div class="period-header">
           <div class="period-num p2">P2</div>
           <div>
-            <div class="period-title">Perioadă Variabilă</div>
-            <div class="period-desc">IRCC + Marjă bancă — restul duratei creditului</div>
+            <div class="period-title" data-i18n="period2_title">Perioadă Variabilă</div>
+            <div class="period-desc" data-i18n="period2_desc">IRCC + Marjă bancă — restul duratei creditului</div>
           </div>
         </div>
         <div class="form-grid form-grid-3">
           <div class="field">
-            <label for="totalVariableRate">Dobândă totală variabilă <span class="field-label-note">IRCC + marjă</span></label>
+            <label for="totalVariableRate"><span data-i18n="total_var_rate">Dobândă totală variabilă</span> <span class="field-label-note" data-i18n="ircc_margin_note">IRCC + marjă</span></label>
             <div class="input-wrap">
               <input type="number" id="totalVariableRate" value="7.78" min="0" step="0.01">
               <span class="unit">%</span>
             </div>
           </div>
           <div class="field">
-            <label for="bankMargin">Marjă bancă</label>
+            <label for="bankMargin" data-i18n="bank_margin">Marjă bancă</label>
             <div class="input-wrap">
               <input type="number" id="bankMargin" value="2.1" min="0" step="0.01">
               <span class="unit">%</span>
             </div>
           </div>
           <div class="field">
-            <label for="initialIRCC">IRCC <span class="field-label-note">calculat automat</span></label>
+            <label for="initialIRCC"><span data-i18n="ircc_label">IRCC</span> <span class="field-label-note" data-i18n="calculated_auto">calculat automat</span></label>
             <div class="input-wrap ircc-computed">
               <input type="number" id="initialIRCC" value="5.99" min="0" step="0.01">
               <span class="unit">%</span>
             </div>
           </div>
           <div class="field">
-            <label>Actualizare IRCC</label>
+            <label data-i18n="ircc_update">Actualizare IRCC</label>
             <div class="toggle" id="irccFreqToggle">
-              <button class="toggle-btn active" data-value="3">Trimestrial</button>
-              <button class="toggle-btn" data-value="6">Semestrial</button>
+              <button class="toggle-btn active" data-value="3" data-i18n="quarterly">Trimestrial</button>
+              <button class="toggle-btn" data-value="6" data-i18n="semiannual">Semestrial</button>
             </div>
           </div>
         </div>
@@ -218,22 +224,22 @@
     <section class="card" id="sec-ircc">
       <div class="card-head">
         <span class="badge">03</span>
-        <h2>Evoluție IRCC</h2>
-        <span class="card-head-note">Aplicabil perioadei variabile (P2)</span>
+        <h2 data-i18n="sec_ircc">Evoluție IRCC</h2>
+        <span class="card-head-note" data-i18n="applicable_p2">Aplicabil perioadei variabile (P2)</span>
       </div>
 
       <div class="model-tabs" id="irccModelTabs">
         <button class="model-tab active" data-model="constant">
-          <span>─</span> Constant
+          <span>─</span> <span data-i18n="model_constant">Constant</span>
         </button>
         <button class="model-tab" data-model="increase">
-          <span>↗</span> Crește
+          <span>↗</span> <span data-i18n="model_increase">Crește</span>
         </button>
         <button class="model-tab" data-model="decrease">
-          <span>↘</span> Scade
+          <span>↘</span> <span data-i18n="model_decrease">Scade</span>
         </button>
         <button class="model-tab" data-model="custom">
-          <span>⋯</span> Custom
+          <span>⋯</span> <span data-i18n="model_custom">Custom</span>
         </button>
       </div>
 
@@ -248,35 +254,35 @@
     <section class="card" id="sec-prepay">
       <div class="card-head">
         <span class="badge">04</span>
-        <h2>Rambursare Anticipată</h2>
+        <h2 data-i18n="sec_prepay">Rambursare Anticipată</h2>
       </div>
 
       <div class="field prepay-option-field">
-        <label>La rambursare anticipată</label>
+        <label data-i18n="prepay_option">La rambursare anticipată</label>
         <div class="toggle" id="prepayOptionToggle">
-          <button class="toggle-btn active" data-value="reduce_period">Reduc Perioada</button>
-          <button class="toggle-btn" data-value="reduce_rate">Reduc Rata</button>
+          <button class="toggle-btn active" data-value="reduce_period" data-i18n="reduce_period">Reduc Perioada</button>
+          <button class="toggle-btn" data-value="reduce_rate" data-i18n="reduce_rate">Reduc Rata</button>
         </div>
       </div>
 
       <!-- Plăți lunare recurente pe intervale -->
       <div class="subsection">
         <div class="subsection-head">
-          <h3>Plăți Lunare Suplimentare</h3>
-          <p>Specifică intervale de ani în care plătești o sumă fixă extra în fiecare lună.</p>
+          <h3 data-i18n="recurring_title">Plăți Lunare Suplimentare</h3>
+          <p data-i18n="recurring_desc">Specifică intervale de ani în care plătești o sumă fixă extra în fiecare lună.</p>
         </div>
         <div id="recurringList" class="pay-list"></div>
-        <button class="btn-add" id="btnAddRecurring">+ Adaugă interval</button>
+        <button class="btn-add" id="btnAddRecurring" data-i18n="btn_add_recurring">+ Adaugă interval</button>
       </div>
 
       <!-- Rambursări ocazionale (lump sum) -->
       <div class="subsection">
         <div class="subsection-head">
-          <h3>Rambursări Ocazionale</h3>
-          <p>Sume specifice plătite o singură dată (injectare de capital).</p>
+          <h3 data-i18n="onetime_title">Rambursări Ocazionale</h3>
+          <p data-i18n="onetime_desc">Sume specifice plătite o singură dată (injectare de capital).</p>
         </div>
         <div id="onetimeList" class="pay-list"></div>
-        <button class="btn-add" id="btnAddOnetime">+ Adaugă rambursare</button>
+        <button class="btn-add" id="btnAddOnetime" data-i18n="btn_add_onetime">+ Adaugă rambursare</button>
       </div>
 
     </section>
@@ -287,7 +293,7 @@
         <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
           <path d="M3 2.5L13 8L3 13.5V2.5Z"/>
         </svg>
-        Simulează Credit
+        <span data-i18n="simulate_btn">Simulează Credit</span>
       </button>
     </div>
 
@@ -300,7 +306,7 @@
       <section class="card" id="section-summary">
         <div class="card-head">
           <span class="badge">05</span>
-          <h2>Rezultate</h2>
+          <h2 data-i18n="sec_results">Rezultate</h2>
         </div>
         <div class="kpi-grid" id="kpiGrid"></div>
       </section>
@@ -309,7 +315,7 @@
       <section class="card card-teal" id="section-decision">
         <div class="card-head">
           <span class="badge">06</span>
-          <h2>Analiză Decizională</h2>
+          <h2 data-i18n="sec_decision">Analiză Decizională</h2>
         </div>
         <div id="decisionContent"></div>
       </section>
@@ -318,8 +324,8 @@
       <section class="card" id="section-stress">
         <div class="card-head">
           <span class="badge">07</span>
-          <h2>Stress Test</h2>
-          <button class="btn-stress" id="btnStress">⚡ Simulează +2% IRCC</button>
+          <h2 data-i18n="sec_stress">Stress Test</h2>
+          <button class="btn-stress" id="btnStress" data-i18n="stress_btn">⚡ Simulează +2% IRCC</button>
         </div>
         <div id="stressContent"></div>
       </section>
@@ -328,23 +334,23 @@
       <section class="card" id="section-charts">
         <div class="card-head">
           <span class="badge">08</span>
-          <h2>Grafice</h2>
+          <h2 data-i18n="sec_charts">Grafice</h2>
         </div>
         <div class="charts-grid">
           <div class="chart-box">
-            <h3>Evoluție IRCC</h3>
+            <h3 data-i18n="chart_ircc_title">Evoluție IRCC</h3>
             <canvas id="chartIRCC"></canvas>
           </div>
           <div class="chart-box">
-            <h3>Rată Lunară</h3>
+            <h3 data-i18n="chart_rate_title">Rată Lunară</h3>
             <canvas id="chartRate"></canvas>
           </div>
           <div class="chart-box">
-            <h3>Sold Rămas</h3>
+            <h3 data-i18n="chart_balance_title">Sold Rămas</h3>
             <canvas id="chartBalance"></canvas>
           </div>
           <div class="chart-box">
-            <h3>Cu vs. Fără Rambursare</h3>
+            <h3 data-i18n="chart_cmp_title">Cu vs. Fără Rambursare</h3>
             <canvas id="chartComparison"></canvas>
           </div>
         </div>
@@ -354,9 +360,9 @@
       <section class="card" id="section-table">
         <div class="card-head">
           <span class="badge">09</span>
-          <h2>Tabel Amortizare</h2>
+          <h2 data-i18n="sec_table">Tabel Amortizare</h2>
           <div class="table-controls">
-            <input type="text" id="tableSearch" placeholder="Caută luna…" class="search-input">
+            <input type="text" id="tableSearch" data-i18n-placeholder="search_placeholder" placeholder="Caută luna…" class="search-input">
             <button class="btn-export" id="btnExportCSV">↓ CSV</button>
           </div>
         </div>
@@ -364,18 +370,18 @@
           <table id="amortTable">
             <thead>
               <tr>
-                <th>Luna</th>
-                <th>IRCC %</th>
-                <th>DAE %</th>
-                <th>Rată</th>
-                <th>Asigurare</th>
-                <th>Rată + Asig.</th>
-                <th>Dobândă</th>
-                <th>Principal</th>
-                <th>Ramb. Sup.</th>
-                <th>Total</th>
-                <th>Economie Lunară</th>
-                <th>Sold Rămas</th>
+                <th data-i18n="th_month">Luna</th>
+                <th data-i18n="th_ircc">IRCC %</th>
+                <th data-i18n="th_dae">DAE %</th>
+                <th data-i18n="th_rate">Rată</th>
+                <th data-i18n="th_insurance">Asigurare</th>
+                <th data-i18n="th_rate_ins">Rată + Asig.</th>
+                <th data-i18n="th_interest">Dobândă</th>
+                <th data-i18n="th_principal">Principal</th>
+                <th data-i18n="th_prepay">Ramb. Sup.</th>
+                <th data-i18n="th_total">Total</th>
+                <th data-i18n="th_savings">Economie Lunară</th>
+                <th data-i18n="th_balance">Sold Rămas</th>
               </tr>
             </thead>
             <tbody id="amortBody"></tbody>
@@ -389,7 +395,7 @@
   </main>
 
   <footer class="footer">
-    <p>Simulator Credit Ipotecar · Calcule orientative · Nu constituie consultanță financiară</p>
+    <p data-i18n="footer_text">Simulator Credit Ipotecar · Calcule orientative · Nu constituie consultanță financiară</p>
   </footer>
 
   <script src="app.js"></script>

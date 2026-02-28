@@ -8,6 +8,7 @@
  *  - Modele evoluție IRCC (constant, crește, scade, custom)
  *  - Tip rată: anuitate / descrescătoare
  *  - Export CSV, grafice, stress test
+ *  - Toggle RO / EN
  */
 
 'use strict';
@@ -21,6 +22,7 @@ const state = {
   irccModel:       'constant',   // 'constant' | 'increase' | 'decrease' | 'custom'
   prepayOption:    'reduce_period', // 'reduce_period' | 'reduce_rate'
   currency:        'RON',        // 'RON' | 'EUR'
+  lang:            'ro',         // 'ro' | 'en'
 
   // Recurring extra payments by year interval: [{fromYear, toYear, amount}]
   recurringPrepays: [],
@@ -32,6 +34,8 @@ const state = {
   simulationResult: null,
   baseResult:       null,
   _params:          null,
+  _baseResult:      null,
+  _stressRan:       false,
   charts:           {},
 
   // Table state
@@ -59,9 +63,323 @@ const fmt = {
   pct:   v   => Number(v).toFixed(2) + '%',
   pct4:  v   => Number(v).toFixed(4) + '%',
   month: v   => {
-    const y = Math.floor((v - 1) / 12) + 1;
-    const m = ((v - 1) % 12) + 1;
-    return `An ${y}, L${String(m).padStart(2,'0')}`;
+    const y  = Math.floor((v - 1) / 12) + 1;
+    const m  = ((v - 1) % 12) + 1;
+    const ms = String(m).padStart(2, '0');
+    return state.lang === 'en'
+      ? `Yr ${y}, M${ms}`
+      : `An ${y}, L${ms}`;
+  },
+};
+
+// ═══════════════════════════════════════════════════════════════
+// TRANSLATIONS
+// ═══════════════════════════════════════════════════════════════
+const LANG = {
+  ro: {
+    // Header
+    header_subtitle:     'Simulator IRCC · România',
+    header_status:       'Calculator activ',
+    // Sections
+    sec_params:          'Parametri Credit',
+    sec_rates:           'Structura Dobânzii',
+    sec_ircc:            'Evoluție IRCC',
+    sec_prepay:          'Rambursare Anticipată',
+    sec_results:         'Rezultate',
+    sec_decision:        'Analiză Decizională',
+    sec_stress:          'Stress Test',
+    sec_charts:          'Grafice',
+    sec_table:           'Tabel Amortizare',
+    // Section 01
+    currency_lbl:        'Monedă',
+    loan_amount:         'Sumă Credit',
+    loan_duration:       'Durată Credit',
+    rate_type:           'Tip Rată',
+    annuity:             'Anuitate',
+    decreasing:          'Descrescătoare',
+    insurance_rate:      'Asigurare Viață',
+    pct_sold:            '% lunar din sold',
+    avans_title:         'Calcul Avans',
+    avans_desc:          'Completează valoarea imobilului pentru a calcula automat avansul și creditul',
+    property_value:      'Valoare Imobil',
+    down_pct:            'Procent Avans',
+    down_amt:            'Sumă Avans',
+    calculated_auto:     'calculat automat',
+    hint_avans:          'Avansul se plătește direct vânzătorului și <strong>nu face parte din credit</strong>. Credit = Valoare imobil − Avans. Câmpul <em>Sumă Credit</em> de mai sus se actualizează automat.',
+    hint_insurance:      'Asigurarea de viață se calculează lunar ca <strong>% din soldul rămas</strong> și se adaugă la rată. Setează la 0 pentru a o exclude.',
+    // Section 02
+    period1_title:       'Perioadă Fixă',
+    optional_tag:        'opțional',
+    period1_desc:        'Dobândă fixă — de obicei primii 3–5 ani',
+    period1_dur:         'Durată perioadă fixă',
+    period1_rate:        'Dobândă anuală fixă',
+    hint_p1:             'Setează durata la <strong>0 ani</strong> dacă creditul nu are perioadă fixă.',
+    period_then:         'apoi',
+    period2_title:       'Perioadă Variabilă',
+    period2_desc:        'IRCC + Marjă bancă — restul duratei creditului',
+    total_var_rate:      'Dobândă totală variabilă',
+    ircc_margin_note:    'IRCC + marjă',
+    bank_margin:         'Marjă bancă',
+    ircc_label:          'IRCC',
+    ircc_update:         'Actualizare IRCC',
+    quarterly:           'Trimestrial',
+    semiannual:          'Semestrial',
+    // Section 03
+    applicable_p2:       'Aplicabil perioadei variabile (P2)',
+    model_constant:      'Constant',
+    model_increase:      'Crește',
+    model_decrease:      'Scade',
+    model_custom:        'Custom',
+    hint_ircc_constant:  'IRCC rămâne constant la valoarea inițială pe toată durata variabilă.',
+    ircc_increase_label: 'Rată anuală de creștere IRCC',
+    ircc_decrease_label: 'Rată anuală de scădere IRCC',
+    ircc_custom_label:   'Valori IRCC (separate prin virgulă, una per perioadă de actualizare)',
+    ircc_custom_ph:      '5.99, 6.25, 6.50, 6.75, 7.00, 6.80 …',
+    hint_ircc_custom:    'Fiecare valoare = o perioadă de actualizare (trimestru/semestru). Ultima valoare se repetă dacă lista e mai scurtă.',
+    // Section 04
+    prepay_option:       'La rambursare anticipată',
+    reduce_period:       'Reduc Perioada',
+    reduce_rate:         'Reduc Rata',
+    recurring_title:     'Plăți Lunare Suplimentare',
+    recurring_desc:      'Specifică intervale de ani în care plătești o sumă fixă extra în fiecare lună.',
+    onetime_title:       'Rambursări Ocazionale',
+    onetime_desc:        'Sume specifice plătite o singură dată (injectare de capital).',
+    btn_add_recurring:   '+ Adaugă interval',
+    btn_add_onetime:     '+ Adaugă rambursare',
+    no_recurring:        'Nicio plată suplimentară adăugată.',
+    no_onetime:          'Nicio rambursare ocazională adăugată.',
+    rp_from:             'De la an',
+    rp_to:               'Până la an',
+    rp_extra:            'Extra / lună',
+    ot_year:             'An',
+    ot_month_lbl:        'Luna',
+    ot_amount:           'Suma',
+    // Simulate / alerts
+    simulate_btn:        'Simulează Credit',
+    simulating:          '⌛ Calculez…',
+    alert_invalid:       'Introdu o sumă și o durată validă!',
+    alert_error:         'Eroare la calcul: ',
+    stress_btn:          '⚡ Simulează +2% IRCC',
+    // Table
+    search_placeholder:  'Caută luna…',
+    th_month:            'Luna',
+    th_ircc:             'IRCC %',
+    th_dae:              'DAE %',
+    th_rate:             'Rată',
+    th_insurance:        'Asigurare',
+    th_rate_ins:         'Rată + Asig.',
+    th_interest:         'Dobândă',
+    th_principal:        'Principal',
+    th_prepay:           'Ramb. Sup.',
+    th_total:            'Total',
+    th_savings:          'Economie Lunară',
+    th_balance:          'Sold Rămas',
+    fixed_tag:           'FIXAT',
+    pagination_months:   'luni',
+    // Charts
+    chart_ircc_title:    'Evoluție IRCC',
+    chart_rate_title:    'Rată Lunară',
+    chart_balance_title: 'Sold Rămas',
+    chart_cmp_title:     'Cu vs. Fără Rambursare',
+    chart_dae_series:    'DAE %',
+    chart_monthly_rate:  sym => `Rată lunară (${sym})`,
+    chart_balance_lbl:   sym => `Sold rămas (${sym})`,
+    chart_no_prepay:     'Fără rambursare',
+    chart_with_prepay:   'Cu rambursare',
+    // KPI labels
+    kpi_p1_total:        'Total Lunar P1 (cu asig.)',
+    kpi_p2_initial:      'Total Lunar P2 Inițial (cu asig.)',
+    kpi_monthly_initial: 'Total Lunar Inițial (cu asig.)',
+    kpi_max_monthly:     'Total Lunar Maxim',
+    kpi_total_paid:      'Total Plătit',
+    kpi_total_interest:  'Total Dobândă',
+    kpi_total_insurance: 'Total Asigurare',
+    kpi_interest_saved:  'Dobândă Economisită',
+    kpi_period_reduced:  'Perioadă Redusă',
+    kpi_loan_finished:   'Credit Finalizat',
+    kpi_effective_rate:  'Dobândă Efectivă Medie',
+    kpi_add_prepay:      'Adaugă rambursare anticipată',
+    kpi_total_saved:     'economisit total',
+    kpi_from_total:      'din total plătit',
+    kpi_months_earlier:  'luni mai devreme',
+    kpi_months_total:    'luni totale',
+    kpi_calculated:      'Calculat pe durata reală',
+    kpi_per_year:        '/an',
+    years_short:         'a',
+    months_short:        'l',
+    ins_abbr:            'asig.',
+    // Decision analysis
+    decision_body:       rate => `Fiecare leu rambursat anticipat îți oferă un randament garantat de <strong>${rate} anual</strong>, echivalent cu un instrument fără risc garantat de stat — superior oricărui depozit bancar în condiții normale de piață.`,
+    decision_implicit:   'Randament implicit',
+    decision_int_saved:  'Dobândă economisită',
+    decision_mon_saved:  'Luni economiste',
+    decision_cost:       'Cost total / creditat',
+    // Stress test
+    stress_p2_rate:      'Rată Variabilă Nouă',
+    stress_monthly:      'Impact Lunar',
+    stress_annual:       'Impact Anual',
+    stress_extra_int:    'Dobândă Extra',
+    stress_extra_yr:     'extra pe an',
+    stress_extra_tot:    'cost suplimentar total',
+    // CSV
+    csv_header:          'An,Luna,Luna Nr.,Tip,IRCC%,DAE%,Rata Baza,Asigurare,Rata+Asig.,Dobanda,Principal,Ramb.Sup.,Total,Economie Lunara,Sold Ramas\n',
+    csv_fixed:           'FIXA',
+    csv_ircc:            'IRCC',
+    // Footer
+    footer_text:         'Simulator Credit Ipotecar · Calcule orientative · Nu constituie consultanță financiară',
+  },
+
+  en: {
+    // Header
+    header_subtitle:     'IRCC Simulator · Romania',
+    header_status:       'Calculator active',
+    // Sections
+    sec_params:          'Loan Parameters',
+    sec_rates:           'Interest Structure',
+    sec_ircc:            'IRCC Evolution',
+    sec_prepay:          'Early Repayment',
+    sec_results:         'Results',
+    sec_decision:        'Decision Analysis',
+    sec_stress:          'Stress Test',
+    sec_charts:          'Charts',
+    sec_table:           'Amortization Table',
+    // Section 01
+    currency_lbl:        'Currency',
+    loan_amount:         'Loan Amount',
+    loan_duration:       'Loan Duration',
+    rate_type:           'Payment Type',
+    annuity:             'Annuity',
+    decreasing:          'Decreasing',
+    insurance_rate:      'Life Insurance',
+    pct_sold:            '% monthly on balance',
+    avans_title:         'Down Payment',
+    avans_desc:          'Fill in property value to auto-calculate down payment and loan amount',
+    property_value:      'Property Value',
+    down_pct:            'Down Payment %',
+    down_amt:            'Down Payment Amount',
+    calculated_auto:     'auto-calculated',
+    hint_avans:          'Down payment is paid directly to the seller and <strong>is not part of the loan</strong>. Loan = Property value − Down payment. The <em>Loan Amount</em> field above updates automatically.',
+    hint_insurance:      'Life insurance is calculated monthly as <strong>% of remaining balance</strong> and added to the payment. Set to 0 to exclude.',
+    // Section 02
+    period1_title:       'Fixed Period',
+    optional_tag:        'optional',
+    period1_desc:        'Fixed interest — usually first 3–5 years',
+    period1_dur:         'Fixed period duration',
+    period1_rate:        'Fixed annual interest rate',
+    hint_p1:             'Set duration to <strong>0 years</strong> if the loan has no fixed period.',
+    period_then:         'then',
+    period2_title:       'Variable Period',
+    period2_desc:        'IRCC + Bank margin — rest of loan duration',
+    total_var_rate:      'Total variable interest',
+    ircc_margin_note:    'IRCC + margin',
+    bank_margin:         'Bank margin',
+    ircc_label:          'IRCC',
+    ircc_update:         'IRCC Update',
+    quarterly:           'Quarterly',
+    semiannual:          'Semi-annual',
+    // Section 03
+    applicable_p2:       'Applicable to variable period (P2)',
+    model_constant:      'Constant',
+    model_increase:      'Increases',
+    model_decrease:      'Decreases',
+    model_custom:        'Custom',
+    hint_ircc_constant:  'IRCC remains constant at the initial value for the entire variable period.',
+    ircc_increase_label: 'IRCC annual increase rate',
+    ircc_decrease_label: 'IRCC annual decrease rate',
+    ircc_custom_label:   'IRCC values (comma-separated, one per update period)',
+    ircc_custom_ph:      '5.99, 6.25, 6.50, 6.75, 7.00, 6.80 …',
+    hint_ircc_custom:    'Each value = one update period (quarter/semester). The last value repeats if the list is shorter.',
+    // Section 04
+    prepay_option:       'On early repayment',
+    reduce_period:       'Reduce Period',
+    reduce_rate:         'Reduce Payment',
+    recurring_title:     'Additional Monthly Payments',
+    recurring_desc:      'Specify year intervals where you pay a fixed extra amount each month.',
+    onetime_title:       'One-time Repayments',
+    onetime_desc:        'Specific amounts paid once (capital injection).',
+    btn_add_recurring:   '+ Add interval',
+    btn_add_onetime:     '+ Add repayment',
+    no_recurring:        'No additional payments added.',
+    no_onetime:          'No one-time repayments added.',
+    rp_from:             'From year',
+    rp_to:               'To year',
+    rp_extra:            'Extra / month',
+    ot_year:             'Year',
+    ot_month_lbl:        'Month',
+    ot_amount:           'Amount',
+    // Simulate / alerts
+    simulate_btn:        'Simulate Loan',
+    simulating:          '⌛ Calculating…',
+    alert_invalid:       'Enter a valid amount and duration!',
+    alert_error:         'Calculation error: ',
+    stress_btn:          '⚡ Simulate +2% IRCC',
+    // Table
+    search_placeholder:  'Search month…',
+    th_month:            'Month',
+    th_ircc:             'IRCC %',
+    th_dae:              'APR %',
+    th_rate:             'Payment',
+    th_insurance:        'Insurance',
+    th_rate_ins:         'Payment + Ins.',
+    th_interest:         'Interest',
+    th_principal:        'Principal',
+    th_prepay:           'Extra Prepay',
+    th_total:            'Total',
+    th_savings:          'Monthly Savings',
+    th_balance:          'Balance',
+    fixed_tag:           'FIXED',
+    pagination_months:   'months',
+    // Charts
+    chart_ircc_title:    'IRCC Evolution',
+    chart_rate_title:    'Monthly Payment',
+    chart_balance_title: 'Remaining Balance',
+    chart_cmp_title:     'With vs. Without Repayment',
+    chart_dae_series:    'APR %',
+    chart_monthly_rate:  sym => `Monthly rate (${sym})`,
+    chart_balance_lbl:   sym => `Remaining balance (${sym})`,
+    chart_no_prepay:     'Without repayment',
+    chart_with_prepay:   'With repayment',
+    // KPI labels
+    kpi_p1_total:        'Monthly Total P1 (with ins.)',
+    kpi_p2_initial:      'Initial Monthly P2 (with ins.)',
+    kpi_monthly_initial: 'Initial Monthly Total (with ins.)',
+    kpi_max_monthly:     'Max Monthly Total',
+    kpi_total_paid:      'Total Paid',
+    kpi_total_interest:  'Total Interest',
+    kpi_total_insurance: 'Total Insurance',
+    kpi_interest_saved:  'Interest Saved',
+    kpi_period_reduced:  'Period Reduced',
+    kpi_loan_finished:   'Loan Finished',
+    kpi_effective_rate:  'Average Effective Rate',
+    kpi_add_prepay:      'Add early repayment',
+    kpi_total_saved:     'total saved',
+    kpi_from_total:      'of total paid',
+    kpi_months_earlier:  'months earlier',
+    kpi_months_total:    'total months',
+    kpi_calculated:      'Calculated over actual duration',
+    kpi_per_year:        '/yr',
+    years_short:         'y',
+    months_short:        'm',
+    ins_abbr:            'ins.',
+    // Decision analysis
+    decision_body:       rate => `Every unit of currency repaid early gives you a guaranteed return of <strong>${rate} per year</strong>, equivalent to a risk-free state-guaranteed instrument — superior to any bank deposit in normal market conditions.`,
+    decision_implicit:   'Implicit return',
+    decision_int_saved:  'Interest saved',
+    decision_mon_saved:  'Months saved',
+    decision_cost:       'Total cost / loaned',
+    // Stress test
+    stress_p2_rate:      'New Variable Rate',
+    stress_monthly:      'Monthly Impact',
+    stress_annual:       'Annual Impact',
+    stress_extra_int:    'Extra Interest',
+    stress_extra_yr:     'extra per year',
+    stress_extra_tot:    'total extra cost',
+    // CSV
+    csv_header:          'Year,Month,Month No.,Type,IRCC%,APR%,Base Rate,Insurance,Rate+Ins.,Interest,Principal,Extra.Prepay,Total,Monthly Savings,Balance\n',
+    csv_fixed:           'FIXED',
+    csv_ircc:            'IRCC',
+    // Footer
+    footer_text:         'Mortgage Simulator · Indicative calculations · Not financial advice',
   },
 };
 
@@ -140,16 +458,6 @@ function computeAnnuityPayment(P, r, n) {
 // ═══════════════════════════════════════════════════════════════
 // SIMULARE LUNARĂ
 // ═══════════════════════════════════════════════════════════════
-/**
- * Params:
- *   loanAmount, durationMonths, margin
- *   period1Months       — câte luni sunt în perioadă fixă
- *   irccMonthly         — array IRCC per lună
- *   monthlyExtra        — array[month] extra plată lunară
- *   onetimePayments     — [{month, amount}]
- *   rateType, prepayOption
- *   insuranceRate       — % lunar din soldul rămas (ex: 0.026)
- */
 function simulateMonthByMonth(params) {
   const {
     loanAmount, durationMonths, margin,
@@ -273,7 +581,6 @@ function runComparativeAnalysis(baseResult, prepayResult) {
 // ═══════════════════════════════════════════════════════════════
 function runStressTest(baseParams, stressIRCCDelta) {
   const stressedIRCC = baseParams.irccMonthly.map((v, i) => {
-    // Nu modificăm dobânda fixă din P1
     if (i < (baseParams.period1Months || 0)) return v;
     return v + stressIRCCDelta;
   });
@@ -290,18 +597,16 @@ function collectParams() {
   const initialIRCC    = numEl('initialIRCC');
   const period1Years   = numEl('period1Years');
   const period1Rate    = numEl('period1Rate');
-  const insuranceRate  = numEl('insuranceRate'); // % lunar din sold
+  const insuranceRate  = numEl('insuranceRate');
   const durationMonths = Math.round(durationYears * 12);
   const period1Months  = Math.min(Math.round(period1Years * 12), durationMonths);
 
-  // IRCC array (P1 + P2)
   const irccMonthly = generateIRCCFull(
     period1Months, period1Rate, margin,
     initialIRCC, durationMonths,
     state.irccModel, state.irccFreq
   );
 
-  // Extra lunar din intervale recurente
   const monthlyExtra = new Array(durationMonths + 1).fill(0);
   for (const rp of state.recurringPrepays) {
     if (!rp.amount || rp.amount <= 0) continue;
@@ -312,7 +617,6 @@ function collectParams() {
     }
   }
 
-  // Rambursări ocazionale: convertim an+lună -> lună absolută
   const onetimeAbsolute = state.onetimePayments.map(p => ({
     month:  (p.year - 1) * 12 + p.month,
     amount: p.amount,
@@ -338,12 +642,19 @@ function collectParams() {
 // ═══════════════════════════════════════════════════════════════
 // RENDER RESULTS
 // ═══════════════════════════════════════════════════════════════
-function renderResults(result, baseResult, params) {
-  const comp      = runComparativeAnalysis(baseResult, result);
+function renderResults(result, baseResult, params, skipScroll = false) {
+  const L    = LANG[state.lang];
+  const comp = runComparativeAnalysis(baseResult, result);
   const hasPrepay = state.recurringPrepays.some(r => r.amount > 0)
                  || state.onetimePayments.some(r => r.amount > 0);
 
   el('resultsSection').className = 'results-visible';
+
+  // Reset stress content on fresh simulation
+  if (!skipScroll) {
+    state._stressRan = false;
+    el('stressContent').innerHTML = '';
+  }
 
   // ── KPI CARDS ─────────────────────────────────────────────
   const firstRow       = result.schedule[0];
@@ -357,35 +668,38 @@ function renderResults(result, baseResult, params) {
 
   let kpiHTML = '';
   if (params.period1Months > 0) {
-    kpiHTML += kpiCard('Total Lunar P1 (cu asig.)',
+    kpiHTML += kpiCard(L.kpi_p1_total,
       fmt.money(initTotal), 'amber',
-      `Rată ${fmt.money(initialPayment)} + asig. ${fmt.money(initInsurance)}`);
-    kpiHTML += kpiCard('Total Lunar P2 Inițial (cu asig.)',
+      `${L.th_rate} ${fmt.money(initialPayment)} + ${L.ins_abbr} ${fmt.money(initInsurance)}`);
+    kpiHTML += kpiCard(L.kpi_p2_initial,
       fmt.money(p2InitPayment), 'sky',
-      `IRCC ${fmt.pct(params.initialIRCC)} + marjă ${fmt.pct(params.margin)}`);
+      `IRCC ${fmt.pct(params.initialIRCC)} + ${L.bank_margin.toLowerCase()} ${fmt.pct(params.margin)}`);
   } else {
-    kpiHTML += kpiCard('Total Lunar Inițial (cu asig.)',
+    kpiHTML += kpiCard(L.kpi_monthly_initial,
       fmt.money(initTotal), 'sky',
-      `Rată ${fmt.money(initialPayment)} + asig. ${fmt.money(initInsurance)}`);
+      `${L.th_rate} ${fmt.money(initialPayment)} + ${L.ins_abbr} ${fmt.money(initInsurance)}`);
   }
-  kpiHTML += kpiCard('Total Lunar Maxim', fmt.money(maxTotal), 'red',
+  kpiHTML += kpiCard(L.kpi_max_monthly, fmt.money(maxTotal), 'red',
     `DAE ${fmt.pct(result.maxRate)}`);
-  kpiHTML += kpiCard('Total Plătit', fmt.money(result.totalPaid), '', '');
-  kpiHTML += kpiCard('Total Dobândă', fmt.money(result.totalInterest), 'red',
-    `${fmt.pct((result.totalInterest / result.totalPaid) * 100)} din total plătit`);
+  kpiHTML += kpiCard(L.kpi_total_paid, fmt.money(result.totalPaid), '', '');
+  kpiHTML += kpiCard(L.kpi_total_interest, fmt.money(result.totalInterest), 'red',
+    `${fmt.pct((result.totalInterest / result.totalPaid) * 100)} ${L.kpi_from_total}`);
   if (hasInsurance) {
-    kpiHTML += kpiCard('Total Asigurare', fmt.money(result.totalInsurance), 'amber',
-      `${fmt.pct((result.totalInsurance / result.totalPaid) * 100)} din total plătit`);
+    kpiHTML += kpiCard(L.kpi_total_insurance, fmt.money(result.totalInsurance), 'amber',
+      `${fmt.pct((result.totalInsurance / result.totalPaid) * 100)} ${L.kpi_from_total}`);
   }
-  kpiHTML += kpiCard('Dobândă Economisită', fmt.money(comp.interestSaved), 'green',
-    hasPrepay ? `${fmt.money(comp.totalSaved)} economisit total` : 'Adaugă rambursare anticipată');
-  kpiHTML += kpiCard('Perioadă Redusă',
-    comp.monthsSaved > 0 ? `${Math.floor(comp.monthsSaved/12)}a ${comp.monthsSaved%12}l` : '—',
-    'green', comp.monthsSaved > 0 ? `${comp.monthsSaved} luni mai devreme` : '');
-  kpiHTML += kpiCard('Credit Finalizat', fmt.month(result.finalMonth), 'amber',
-    `${result.finalMonth} luni totale`);
-  kpiHTML += kpiCard('Dobândă Efectivă Medie', fmt.pct(result.effectiveRate) + '/an', 'teal',
-    'Calculat pe durata reală');
+  kpiHTML += kpiCard(L.kpi_interest_saved, fmt.money(comp.interestSaved), 'green',
+    hasPrepay ? `${fmt.money(comp.totalSaved)} ${L.kpi_total_saved}` : L.kpi_add_prepay);
+  kpiHTML += kpiCard(L.kpi_period_reduced,
+    comp.monthsSaved > 0
+      ? `${Math.floor(comp.monthsSaved / 12)}${L.years_short} ${comp.monthsSaved % 12}${L.months_short}`
+      : '—',
+    'green',
+    comp.monthsSaved > 0 ? `${comp.monthsSaved} ${L.kpi_months_earlier}` : '');
+  kpiHTML += kpiCard(L.kpi_loan_finished, fmt.month(result.finalMonth), 'amber',
+    `${result.finalMonth} ${L.kpi_months_total}`);
+  kpiHTML += kpiCard(L.kpi_effective_rate, fmt.pct(result.effectiveRate) + L.kpi_per_year, 'teal',
+    L.kpi_calculated);
 
   el('kpiGrid').innerHTML = kpiHTML;
 
@@ -394,17 +708,14 @@ function renderResults(result, baseResult, params) {
     <div class="decision-box">
       <div class="decision-icon">💡</div>
       <div class="decision-text">
-        Fiecare leu rambursat anticipat îți oferă un randament garantat de
-        <strong>${fmt.pct(result.effectiveRate)} anual</strong>,
-        echivalent cu un instrument fără risc garantat de stat —
-        superior oricărui depozit bancar în condiții normale de piață.
+        ${L.decision_body(fmt.pct(result.effectiveRate))}
       </div>
     </div>
     <div class="decision-stats">
-      ${decStat('Randament implicit',     fmt.pct(result.effectiveRate))}
-      ${decStat('Dobândă economisită',    fmt.money(comp.interestSaved))}
-      ${decStat('Luni economiste',        comp.monthsSaved + ' luni')}
-      ${decStat('Cost total / creditat',  fmt.pct((result.totalInterest / params.loanAmount) * 100))}
+      ${decStat(L.decision_implicit,  fmt.pct(result.effectiveRate))}
+      ${decStat(L.decision_int_saved, fmt.money(comp.interestSaved))}
+      ${decStat(L.decision_mon_saved, comp.monthsSaved + ' ' + L.pagination_months)}
+      ${decStat(L.decision_cost,      fmt.pct((result.totalInterest / params.loanAmount) * 100))}
     </div>
   `;
 
@@ -415,7 +726,6 @@ function renderResults(result, baseResult, params) {
   state.tableData = result.schedule;
   state.tablePage = 1;
 
-  // Hartă lună → rând din scenariul de bază (pentru coloana Economie Lunară)
   state.baseScheduleMap = {};
   (baseResult.schedule || []).forEach(r => { state.baseScheduleMap[r.month] = r; });
 
@@ -425,7 +735,9 @@ function renderResults(result, baseResult, params) {
   state._params          = params;
   state._baseResult      = baseResult;
 
-  el('section-summary').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (!skipScroll) {
+    el('section-summary').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 
 function kpiCard(label, value, type, sub) {
@@ -480,7 +792,8 @@ const chartOpts = {
 };
 
 function renderCharts(result, baseResult, params) {
-  const sched    = result.schedule;
+  const L      = LANG[state.lang];
+  const sched  = result.schedule;
   const nMonths  = sched.length;
   const step     = nMonths > 240 ? 6 : nMonths > 120 ? 3 : 1;
   const filtered = sched.filter((_, i) => i % step === 0);
@@ -501,7 +814,7 @@ function renderCharts(result, baseResult, params) {
           borderWidth: 2, tension: 0.3, pointRadius: 0, fill: true,
         },
         {
-          label: 'DAE %',
+          label: L.chart_dae_series,
           data: filtered.map(r => +r.annualRate.toFixed(4)),
           borderColor: '#38bdf8',
           backgroundColor: 'rgba(56,189,248,0.04)',
@@ -520,7 +833,7 @@ function renderCharts(result, baseResult, params) {
     data: {
       labels,
       datasets: [{
-        label: `Rată lunară (${fmt.sym()})`,
+        label: L.chart_monthly_rate(fmt.sym()),
         data: filtered.map(r => +r.payment.toFixed(2)),
         borderColor: '#38bdf8',
         backgroundColor: 'rgba(56,189,248,0.07)',
@@ -543,7 +856,7 @@ function renderCharts(result, baseResult, params) {
     data: {
       labels,
       datasets: [{
-        label: `Sold rămas (${fmt.sym()})`,
+        label: L.chart_balance_lbl(fmt.sym()),
         data: filtered.map(r => +r.balance.toFixed(2)),
         borderColor: '#4ade80',
         backgroundColor: 'rgba(74,222,128,0.07)',
@@ -573,14 +886,14 @@ function renderCharts(result, baseResult, params) {
       labels: cLabels,
       datasets: [
         {
-          label: `Fără rambursare`,
+          label: L.chart_no_prepay,
           data: bFilt.map(r => +r.balance.toFixed(2)),
           borderColor: '#f87171',
           backgroundColor: 'rgba(248,113,113,0.05)',
           borderWidth: 2, tension: 0.3, pointRadius: 0, fill: true,
         },
         {
-          label: `Cu rambursare`,
+          label: L.chart_with_prepay,
           data: rFilt.map(r => +r.balance.toFixed(2)),
           borderColor: '#4ade80',
           backgroundColor: 'rgba(74,222,128,0.05)',
@@ -604,6 +917,7 @@ function renderCharts(result, baseResult, params) {
 const PAGE_SIZE = 50;
 
 function renderTable(filterText = '') {
+  const L       = LANG[state.lang];
   const allRows  = state.tableData || [];
   const filtered = filterText
     ? allRows.filter(r =>
@@ -624,13 +938,12 @@ function renderTable(filterText = '') {
       r.extraPrepay > 0 ? 'has-prepay'  : '',
     ].filter(Boolean).join(' ');
 
-    // Economie lunară = cât mai puțină dobândă plătești ÎN LUNA ASTA față de baza
     const baseRow      = state.baseScheduleMap?.[r.month];
     const savedMonthly = baseRow ? Math.max(0, baseRow.interestPart - r.interestPart) : 0;
 
     return `<tr class="${cls}">
       <td>${fmt.month(r.month)}</td>
-      <td>${r.isFixed ? '<span style="color:var(--amber)">FIXAT</span>' : fmt.pct(r.ircc)}</td>
+      <td>${r.isFixed ? `<span style="color:var(--amber)">${L.fixed_tag}</span>` : fmt.pct(r.ircc)}</td>
       <td>${fmt.pct(r.annualRate)}</td>
       <td>${fmt.money(r.payment)}</td>
       <td style="color:var(--amber)">${r.insurancePart > 0 ? fmt.money(r.insurancePart) : '—'}</td>
@@ -668,7 +981,7 @@ function renderTable(filterText = '') {
         : `<button class="page-btn ${p===cur?'active':''}" onclick="changePage(${p})">${p}</button>`
     ).join('')}
     <button class="page-btn" onclick="changePage(${cur+1})" ${cur===totalPages?'disabled':''}>›</button>
-    <span class="page-info">${filtered.length} luni</span>
+    <span class="page-info">${filtered.length} ${L.pagination_months}</span>
   `;
 }
 
@@ -681,12 +994,12 @@ function changePage(p) {
 // CSV EXPORT
 // ═══════════════════════════════════════════════════════════════
 function exportCSV() {
+  const L     = LANG[state.lang];
   const sched = state.tableData || [];
-  const header = 'An,Luna,Luna Nr.,Tip,IRCC%,DAE%,Rata Baza,Asigurare,Rata+Asig.,Dobanda,Principal,Ramb.Sup.,Total,Economie Lunara,Sold Ramas\n';
   const rows = sched.map(r => {
     const yr = Math.floor((r.month - 1) / 12) + 1;
     const mn = ((r.month - 1) % 12) + 1;
-    const tip = r.isFixed ? 'FIXA' : 'IRCC';
+    const tip = r.isFixed ? L.csv_fixed : L.csv_ircc;
     const baseRow = state.baseScheduleMap?.[r.month];
     const savedMonthly = baseRow ? Math.max(0, baseRow.interestPart - r.interestPart) : 0;
     return [yr, mn, r.month, tip,
@@ -696,7 +1009,7 @@ function exportCSV() {
       r.extraPrepay.toFixed(2), (r.totalPayment + r.extraPrepay).toFixed(2),
       savedMonthly.toFixed(2), r.balance.toFixed(2)].join(',');
   });
-  const blob = new Blob([header + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob([L.csv_header + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href = url; a.download = 'credit_ipotecar.csv'; a.click();
@@ -708,14 +1021,14 @@ function exportCSV() {
 // ═══════════════════════════════════════════════════════════════
 function renderStressTest() {
   if (!state._params) return;
+  const L          = LANG[state.lang];
+  state._stressRan = true;
   const stressResult = runStressTest(state._params, 2);
   const orig = state.simulationResult;
 
   const origRate   = orig.schedule[0]?.payment || 0;
   const stressRate = stressResult.schedule[0]?.payment || 0;
-  const delta      = stressRate - origRate;
 
-  // Găsim prima rată din P2 (variabilă) pentru stress test
   const p1m = state._params.period1Months || 0;
   const origP2Rate   = orig.schedule[p1m]?.payment || origRate;
   const stressP2Rate = stressResult.schedule[p1m]?.payment || stressRate;
@@ -723,10 +1036,10 @@ function renderStressTest() {
 
   el('stressContent').innerHTML = `
     <div class="stress-grid">
-      ${stressItem('Rată Variabilă Nouă', fmt.money(stressP2Rate), '')}
-      ${stressItem('Impact Lunar', '+' + fmt.money(deltaP2), `vs ${fmt.money(origP2Rate)}`)}
-      ${stressItem('Impact Anual', '+' + fmt.money(deltaP2 * 12), 'extra pe an')}
-      ${stressItem('Dobândă Extra', '+' + fmt.money(stressResult.totalInterest - orig.totalInterest), 'cost suplimentar total')}
+      ${stressItem(L.stress_p2_rate,    fmt.money(stressP2Rate), '')}
+      ${stressItem(L.stress_monthly,    '+' + fmt.money(deltaP2),       `vs ${fmt.money(origP2Rate)}`)}
+      ${stressItem(L.stress_annual,     '+' + fmt.money(deltaP2 * 12),  L.stress_extra_yr)}
+      ${stressItem(L.stress_extra_int,  '+' + fmt.money(stressResult.totalInterest - orig.totalInterest), L.stress_extra_tot)}
     </div>
   `;
 }
@@ -743,16 +1056,17 @@ function stressItem(label, value, delta) {
 // UI: MODEL IRCC PARAMS
 // ═══════════════════════════════════════════════════════════════
 function renderIRCCParams() {
+  const L         = LANG[state.lang];
   const container = el('irccModelParams');
   const model     = state.irccModel;
 
   if (model === 'constant') {
-    container.innerHTML = `<p class="hint">IRCC rămâne constant la valoarea inițială pe toată durata variabilă.</p>`;
+    container.innerHTML = `<p class="hint">${L.hint_ircc_constant}</p>`;
   } else if (model === 'increase') {
     container.innerHTML = `
       <div class="form-grid form-grid-2">
         <div class="field">
-          <label>Rată anuală de creștere IRCC</label>
+          <label>${L.ircc_increase_label}</label>
           <div class="input-wrap">
             <input type="number" id="irccLinearRate" value="0.25" min="0" max="5" step="0.05">
             <span class="unit">%/AN</span>
@@ -763,7 +1077,7 @@ function renderIRCCParams() {
     container.innerHTML = `
       <div class="form-grid form-grid-2">
         <div class="field">
-          <label>Rată anuală de scădere IRCC</label>
+          <label>${L.ircc_decrease_label}</label>
           <div class="input-wrap">
             <input type="number" id="irccLinearRate" value="0.25" min="0" max="5" step="0.05">
             <span class="unit">%/AN</span>
@@ -773,9 +1087,9 @@ function renderIRCCParams() {
   } else if (model === 'custom') {
     container.innerHTML = `
       <div class="field">
-        <label>Valori IRCC (separate prin virgulă, una per perioadă de actualizare)</label>
-        <textarea id="irccCustomValues" placeholder="5.99, 6.25, 6.50, 6.75, 7.00, 6.80 …"></textarea>
-        <p class="hint">Fiecare valoare = o perioadă de actualizare (trimestru/semestru). Ultima valoare se repetă dacă lista e mai scurtă.</p>
+        <label>${L.ircc_custom_label}</label>
+        <textarea id="irccCustomValues" placeholder="${L.ircc_custom_ph}"></textarea>
+        <p class="hint">${L.hint_ircc_custom}</p>
       </div>`;
   }
 }
@@ -784,19 +1098,20 @@ function renderIRCCParams() {
 // UI: PLĂȚI LUNARE RECURENTE
 // ═══════════════════════════════════════════════════════════════
 function renderRecurringList() {
-  const container  = el('recurringList');
-  const maxYears   = numEl('loanDuration') || 30;
-  const currUnit   = fmt.unit();
+  const L         = LANG[state.lang];
+  const container = el('recurringList');
+  const maxYears  = numEl('loanDuration') || 30;
+  const currUnit  = fmt.unit();
 
   if (state.recurringPrepays.length === 0) {
-    container.innerHTML = `<p class="hint" style="margin-top:0">Nicio plată suplimentară adăugată.</p>`;
+    container.innerHTML = `<p class="hint" style="margin-top:0">${L.no_recurring}</p>`;
     return;
   }
 
   container.innerHTML = state.recurringPrepays.map((rp, i) => `
     <div class="pay-row">
       <div class="field">
-        <label>De la an</label>
+        <label>${L.rp_from}</label>
         <div class="input-wrap">
           <input type="number" class="rp-fromYear" data-idx="${i}"
             value="${rp.fromYear}" min="1" max="${maxYears}">
@@ -804,7 +1119,7 @@ function renderRecurringList() {
         </div>
       </div>
       <div class="field">
-        <label>Până la an</label>
+        <label>${L.rp_to}</label>
         <div class="input-wrap">
           <input type="number" class="rp-toYear" data-idx="${i}"
             value="${rp.toYear || maxYears}" min="1" max="${maxYears}">
@@ -812,7 +1127,7 @@ function renderRecurringList() {
         </div>
       </div>
       <div class="field">
-        <label>Extra / lună</label>
+        <label>${L.rp_extra}</label>
         <div class="input-wrap">
           <input type="number" class="rp-amount" data-idx="${i}"
             value="${rp.amount}" min="0" step="100">
@@ -849,18 +1164,19 @@ function removeRecurring(i) {
 // UI: RAMBURSĂRI OCAZIONALE (lump sum)
 // ═══════════════════════════════════════════════════════════════
 function renderOnetimeList() {
+  const L         = LANG[state.lang];
   const container = el('onetimeList');
   const currUnit  = fmt.unit();
 
   if (state.onetimePayments.length === 0) {
-    container.innerHTML = `<p class="hint" style="margin-top:0">Nicio rambursare ocazională adăugată.</p>`;
+    container.innerHTML = `<p class="hint" style="margin-top:0">${L.no_onetime}</p>`;
     return;
   }
 
   container.innerHTML = state.onetimePayments.map((p, i) => `
     <div class="onetime-row">
       <div class="field">
-        <label>An</label>
+        <label>${L.ot_year}</label>
         <div class="input-wrap">
           <input type="number" class="ot-year" data-idx="${i}"
             value="${p.year}" min="1" max="30">
@@ -868,7 +1184,7 @@ function renderOnetimeList() {
         </div>
       </div>
       <div class="field">
-        <label>Luna</label>
+        <label>${L.ot_month_lbl}</label>
         <div class="input-wrap">
           <input type="number" class="ot-month" data-idx="${i}"
             value="${p.month}" min="1" max="12">
@@ -876,7 +1192,7 @@ function renderOnetimeList() {
         </div>
       </div>
       <div class="field">
-        <label>Suma</label>
+        <label>${L.ot_amount}</label>
         <div class="input-wrap">
           <input type="number" class="ot-amount" data-idx="${i}"
             value="${p.amount}" min="0" step="500">
@@ -919,25 +1235,72 @@ function updateCurrencyUnits() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// APPLY LANGUAGE
+// ═══════════════════════════════════════════════════════════════
+function applyLanguage(lang) {
+  state.lang = lang;
+  const L = LANG[lang];
+
+  // Static text content
+  document.querySelectorAll('[data-i18n]').forEach(node => {
+    const key = node.dataset.i18n;
+    if (L[key] !== undefined) node.textContent = L[key];
+  });
+
+  // Static innerHTML (hints with <strong>/<em>)
+  document.querySelectorAll('[data-i18n-html]').forEach(node => {
+    const key = node.dataset.i18nHtml;
+    if (L[key] !== undefined) node.innerHTML = L[key];
+  });
+
+  // Placeholders
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(node => {
+    const key = node.dataset.i18nPlaceholder;
+    if (L[key] !== undefined) node.placeholder = L[key];
+  });
+
+  // Lang button active states
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === lang);
+  });
+
+  // html lang attribute
+  document.documentElement.lang = lang;
+
+  // Re-render dynamic sections
+  renderIRCCParams();
+  renderRecurringList();
+  renderOnetimeList();
+
+  if (state.simulationResult && state._params && state._baseResult) {
+    renderResults(state.simulationResult, state._baseResult, state._params, true);
+  }
+  if (state._stressRan) {
+    renderStressTest();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // SIMULARE PRINCIPALĂ
 // ═══════════════════════════════════════════════════════════════
 function simulate() {
+  const L      = LANG[state.lang];
   const amount = numEl('loanAmount');
   const years  = numEl('loanDuration');
   if (amount <= 0 || years <= 0) {
-    alert('Introdu o sumă și o durată validă!');
+    alert(L.alert_invalid);
     return;
   }
 
+  const svgPlay = '<svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2.5L13 8L3 13.5V2.5Z"/></svg>';
   const btn = el('btnSimulate');
-  btn.innerHTML = '⌛ Calculez…';
+  btn.innerHTML = L.simulating;
   btn.disabled  = true;
 
   setTimeout(() => {
     try {
       const params = collectParams();
 
-      // Scenariul de bază (fără rambursări anticipate, dar cu asigurare)
       const baseParams = {
         ...params,
         monthlyExtra:    new Array(params.durationMonths + 1).fill(0),
@@ -949,10 +1312,10 @@ function simulate() {
       renderResults(fullResult, baseResult, params);
     } catch (e) {
       console.error(e);
-      alert('Eroare la calcul: ' + e.message);
+      alert(LANG[state.lang].alert_error + e.message);
     }
 
-    btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2.5L13 8L3 13.5V2.5Z"/></svg> Simulează Credit';
+    btn.innerHTML = `${svgPlay} ${LANG[state.lang].simulate_btn}`;
     btn.disabled  = false;
   }, 30);
 }
@@ -1009,10 +1372,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  renderIRCCParams();
-  renderRecurringList();
-  renderOnetimeList();
-
   el('btnAddRecurring')?.addEventListener('click', addRecurring);
   el('btnAddOnetime')?.addEventListener('click',   addOnetime);
   el('btnSimulate')?.addEventListener('click',     simulate);
@@ -1025,9 +1384,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ── SINCRONIZARE totalVariableRate ↔ bankMargin ↔ initialIRCC ──────────
-  // Regula: totalVariableRate = IRCC + marjă
-  // Orice câmp modificat recalculează IRCC
-
   function syncIRCC() {
     const total  = parseFloat(el('totalVariableRate')?.value) || 0;
     const margin = parseFloat(el('bankMargin')?.value) || 0;
@@ -1041,7 +1397,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (el('totalVariableRate')) el('totalVariableRate').value = (ircc + margin).toFixed(2);
   }
 
-  // Inițializare: calculăm IRCC din totalVariableRate și marjă
   syncIRCC();
 
   el('totalVariableRate')?.addEventListener('input', syncIRCC);
@@ -1049,8 +1404,6 @@ document.addEventListener('DOMContentLoaded', () => {
   el('initialIRCC')?.addEventListener('input', syncTotal);
 
   // ── AVANS (Down Payment) Calculator ─────────────────────────────
-  // Avansul NU face parte din credit.
-  // Credit = Valoare Imobil − Avans
   function updateLoanFromAvans() {
     const propVal = parseFloat(el('propertyValue')?.value) || 0;
     const pct     = parseFloat(el('downPaymentPct')?.value) || 0;
@@ -1069,10 +1422,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   el('propertyValue')?.addEventListener('input',  updateLoanFromAvans);
   el('downPaymentPct')?.addEventListener('input', updateLoanFromAvans);
-  updateLoanFromAvans(); // aplică valorile default la încărcare
+  updateLoanFromAvans();
+
+  // Language toggle
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => applyLanguage(btn.dataset.lang));
+  });
 
   // Ctrl+Enter simulează
   document.addEventListener('keydown', e => {
     if (e.key === 'Enter' && e.ctrlKey) simulate();
   });
+
+  // Init language (renders dynamic sections + applies all data-i18n)
+  applyLanguage('ro');
 });
